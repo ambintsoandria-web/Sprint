@@ -1,4 +1,4 @@
-package mg.itu.Servlet;
+package mg.itu.utils;
 
 import java.io.File;
 import java.net.URL;
@@ -15,13 +15,13 @@ public class PackageScanner {
             URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
 
             if (resource == null) {
-                System.out.println("[Framework] Package non trouvé: " + packageName);
+                System.out.println("[Framework] Package non trouve: " + packageName);
                 return classes;
             }
 
-            File directory = new File(resource.getFile());
+            File directory = new File(resource.getFile()); // ito ilay manao anle package scanner
             if (!directory.exists()) {
-                System.out.println("[Framework] Dossier non trouvé: " + directory.getAbsolutePath());
+                System.out.println("[Framework] Dossier non trouve: " + directory.getAbsolutePath());
                 return classes;
             }
 
@@ -38,4 +38,4 @@ public class PackageScanner {
 
         return classes;
     }
-}   
+}
