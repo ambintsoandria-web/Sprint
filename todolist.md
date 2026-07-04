@@ -15,3 +15,19 @@ on va mettre un SYstem.out.println dans la console de tomcat
 le 3 bis juste mi executer anle izy 
 
 # sprint 4
+
+
+# sprint 5
+prefixe et suffixe 
+invoker la methode in recup la valeur de retour
+model and View on prend l'instance et on prend l'url et la view avec le dispatcher servlet je sais pas ....
+dans request on fait setAttribute et on boucle ...String object
+web.xml on va mettre prefixe et suffixe
+setUrl
+
+model and view View et la Map donnee
+on concate dans le web.xml
+    
+On utilise le dispatcher
+
+on fait le model.addAttribute mais ici on fait : 
