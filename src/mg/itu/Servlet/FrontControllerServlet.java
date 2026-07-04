@@ -3,9 +3,7 @@ package mg.itu.Servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,65 +11,16 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import mg.itu.annotation.Controller.Controller;
-import mg.itu.annotation.Url.UrlMapping;
 import mg.itu.utils.MethodInfo;
-import mg.itu.utils.PackageScanner;
 import mg.itu.utils.UrlMethod;
 
 public class FrontControllerServlet extends HttpServlet {
 
     private static Set<String> uris = new HashSet<>();
-    private static Map<UrlMethod, MethodInfo> urlMethodMappings = new HashMap<>();
 
     @Override
     public void init() throws ServletException {
-        System.out.println("[Framework] Scan des classes...");
-
-        String packageToScan = getServletContext().getInitParameter("controllerPackage");
-        if (packageToScan == null || packageToScan.isEmpty()) {
-            packageToScan = "controlleur";
-        }
-
-        List<String> allClasses = PackageScanner.getClasses(packageToScan);
-
-        for (String className : allClasses) {
-            try {
-                Class<?> clazz = Class.forName(className);
-
-                if (clazz.isAnnotationPresent(Controller.class)) {
-                    System.out.println("[Framework] Controller: " + className);
-
-                    for (Method method : clazz.getMethods()) {
-                        if (method.isAnnotationPresent(UrlMapping.class)) {
-                            UrlMapping rm = method.getAnnotation(UrlMapping.class);
-                            String url = rm.value();
-                            String httpMethod = rm.method();
-
-                            if (httpMethod == null || httpMethod.isEmpty()) {
-                                httpMethod = "GET";
-                            }
-
-                            UrlMethod key = new UrlMethod(url, httpMethod);
-
-                            if (urlMethodMappings.containsKey(key)) {
-                                throw new ServletException("URL dupliquee: " + httpMethod + " " + url);
-                            }
-
-                            MethodInfo info = new MethodInfo(className, method.getName());
-                            urlMethodMappings.put(key, info);
-
-                            System.out.println("[Framework] Mapping: " + httpMethod + " " + url + " -> " + className
-                                    + "." + method.getName());
-                        }
-                    }
-                }
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-
-        System.out.println("[Framework] Total mappings: " + urlMethodMappings.size());
+        System.out.println("[Framework] FrontControllerServlet initialise");
     }
 
     @Override
@@ -101,6 +50,11 @@ public class FrontControllerServlet extends HttpServlet {
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
+        // Si erreur d'initialisation, la lancer
+        if (AppListener.initError != null) {
+            throw new ServletException(AppListener.initError);
+        }
+
         String uri = req.getRequestURI();
         String contextPath = req.getContextPath();
         String chemin = uri.substring(contextPath.length());
@@ -117,13 +71,13 @@ public class FrontControllerServlet extends HttpServlet {
 
         UrlMethod key = new UrlMethod(chemin, httpMethod);
 
-        if (urlMethodMappings.containsKey(key)) {
-            MethodInfo info = urlMethodMappings.get(key);
+        if (AppListener.urlMethodMappings.containsKey(key)) {
+            MethodInfo info = AppListener.urlMethodMappings.get(key);
             String simpleName = info.className.substring(info.className.lastIndexOf('.') + 1);
             out.println("<p>Classe: " + simpleName + "</p>");
             out.println("<p>Methode: " + info.methodName + "</p>");
 
-            try { 
+            try {
                 Class<?> clazz = Class.forName(info.className);
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
@@ -137,13 +91,12 @@ public class FrontControllerServlet extends HttpServlet {
                 }
 
             } catch (Exception e) {
-                out.println("<p>Erreur: " + e.getMessage() + "</p>");
-                e.printStackTrace();
+                throw new ServletException(e);
             }
         } else {
             out.println("<p>404 - Aucun mapping pour: " + httpMethod + " " + chemin + "</p>");
             out.println("<h2>Mappings disponibles</h2><ul>");
-            for (Map.Entry<UrlMethod, MethodInfo> entry : urlMethodMappings.entrySet()) {
+            for (Map.Entry<UrlMethod, MethodInfo> entry : AppListener.urlMethodMappings.entrySet()) {
                 String simpleName = entry.getValue().className
                         .substring(entry.getValue().className.lastIndexOf('.') + 1);
                 out.println(
