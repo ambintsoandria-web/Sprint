@@ -15,7 +15,8 @@ on va mettre un SYstem.out.println dans la console de tomcat
 le 3 bis juste mi executer anle izy 
 
 # sprint 4
-
+Implémentation de AppListener qui va hériter de ServletContextListener
+on va donc implémenter AppListener et y mettre la logique d'initialisation au lieu de le mettre dans void dans FrontControllerServlet
 
 # sprint 5
 prefixe et suffixe 
@@ -31,3 +32,6 @@ on concate dans le web.xml
 On utilise le dispatcher
 
 on fait le model.addAttribute mais ici on fait : 
+
+Atao anaty base de donnée
+genre hoe tsy atao version hoe ...
