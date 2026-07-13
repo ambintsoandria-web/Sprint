@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
@@ -18,13 +19,28 @@ import mg.itu.utils.UrlMethod;
 public class AppListener implements ServletContextListener {
 
     public static Map<UrlMethod, MethodInfo> urlMethodMappings = new HashMap<>();
+    public static String viewPrefix = "";
+    public static String viewSuffix = "";
     public static RuntimeException initError = null;
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         System.out.println("[Framework] Demarrage de l'application...");
 
-        String packageToScan = sce.getServletContext().getInitParameter("controllerPackage");
+        ServletContext context = sce.getServletContext();
+
+        viewPrefix = context.getInitParameter("viewPrefix");
+        if (viewPrefix == null)
+            viewPrefix = "/WEB-INF/views/";
+
+        viewSuffix = context.getInitParameter("viewSuffix");
+        if (viewSuffix == null)
+            viewSuffix = ".jsp";
+
+        System.out.println("[Framework] View prefix: " + viewPrefix);
+        System.out.println("[Framework] View suffix: " + viewSuffix);
+
+        String packageToScan = context.getInitParameter("controllerPackage");
         if (packageToScan == null || packageToScan.isEmpty()) {
             packageToScan = "controlleur";
         }
@@ -73,7 +89,6 @@ public class AppListener implements ServletContextListener {
             }
         } catch (RuntimeException e) {
             initError = e;
-            System.err.println("[Framework] ERREUR: " + e.getMessage());
             e.printStackTrace();
         }
 
