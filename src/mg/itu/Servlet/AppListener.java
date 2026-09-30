@@ -11,6 +11,7 @@ import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 import mg.itu.annotation.Controller.Controller;
 import mg.itu.annotation.Url.UrlMapping;
+import mg.itu.utils.Database;
 import mg.itu.utils.MethodInfo;
 import mg.itu.utils.PackageScanner;
 import mg.itu.utils.UrlMethod;
@@ -28,6 +29,7 @@ public class AppListener implements ServletContextListener {
         System.out.println("[Framework] Demarrage de l'application...");
 
         ServletContext context = sce.getServletContext();
+        Database.init(context);
 
         viewPrefix = context.getInitParameter("viewPrefix");
         if (viewPrefix == null)
@@ -74,12 +76,14 @@ public class AppListener implements ServletContextListener {
                                                     existing.className + "." + existing.methodName + " et " +
                                                     className + "." + method.getName());
                                 }
+                                boolean isJson = method.isAnnotationPresent(mg.itu.annotation.Json.Json.class);
 
-                                MethodInfo info = new MethodInfo(className, method.getName());
+                                MethodInfo info = new MethodInfo(className, method.getName(), isJson);
                                 urlMethodMappings.put(key, info);
 
-                                System.out.println("[Framework] Mapping: " + httpMethod + " " + url + " -> " + className
-                                        + "." + method.getName());
+                                System.out.println("[Framework] Mapping: " + httpMethod + " " + url + " -> "
+                                        + className + "." + method.getName()
+                                        + (isJson ? " [JSON]" : ""));
                             }
                         }
                     }

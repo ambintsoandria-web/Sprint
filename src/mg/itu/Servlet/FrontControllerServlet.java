@@ -12,6 +12,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mg.itu.utils.JsonConverter;
 import mg.itu.utils.MethodInfo;
 import mg.itu.utils.ModelAndView;
 import mg.itu.utils.UrlMethod;
@@ -77,11 +78,30 @@ public class FrontControllerServlet extends HttpServlet {
 
                 try {
                     Method method = clazz.getMethod(info.methodName, HttpServletRequest.class,
-                            HttpServletResponse.class);
+                            HttpServletResponse.class); // azo ilay methode exemple : GetAllUsers();
                     result = method.invoke(instance, req, resp);
                 } catch (NoSuchMethodException e) {
                     Method method = clazz.getMethod(info.methodName);
                     result = method.invoke(instance);
+                }
+
+                // SI la méthode est annotée @Json
+                if (info.IsJson()) {
+                    resp.setContentType("application/json");
+                    resp.setCharacterEncoding("UTF-8");
+                    PrintWriter out = resp.getWriter();
+
+                    if (result == null) {
+                        out.print("null");
+                    } else if (result instanceof String) {
+                        // Déjà une String → on écrit directement
+                        out.print((String) result);
+                    } else {
+                        // Sinon on convertit en JSON
+                        out.print(JsonConverter.toJson(result));
+                    }
+                    out.flush();
+                    return;
                 }
 
                 // SI result est ModelAndView
