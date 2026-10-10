@@ -76,16 +76,35 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Object result = null;
 
-                try {
-                    Method method = clazz.getMethod(info.methodName, HttpServletRequest.class,
-                            HttpServletResponse.class); // azo ilay methode exemple : GetAllUsers();
-                    result = method.invoke(instance, req, resp);
-                } catch (NoSuchMethodException e) {
-                    Method method = clazz.getMethod(info.methodName);
-                    result = method.invoke(instance);
+                // Chercher TOUTES les methodes qui portent ce nom
+                Method targetMethod = null;
+                for (Method m : clazz.getMethods()) {
+                    if (m.getName().equals(info.methodName)) { // ito zao le manao anle hoe : "nom" === nom
+                        targetMethod = m;
+                        break;
+                    }
                 }
 
-                // SI la méthode est annotée @Json
+                if (targetMethod == null) {
+                    throw new ServletException("Methode introuvable: " + info.methodName);
+                }
+
+                // Verifier si c'est (HttpServletRequest, HttpServletResponse)
+                Class<?>[] paramTypes = targetMethod.getParameterTypes();
+
+                if (paramTypes.length == 2
+                        && paramTypes[0] == HttpServletRequest.class
+                        && paramTypes[1] == HttpServletResponse.class) {
+
+                    result = targetMethod.invoke(instance, req, resp);
+
+                } else {
+                    // Injection des parametres via buildArgs
+                    Object[] args = MethodInfo.buildArgs(targetMethod, req, resp);
+                    result = targetMethod.invoke(instance, args);
+                }
+
+                // SI la methode est annotee @Json
                 if (info.IsJson()) {
                     resp.setContentType("application/json");
                     resp.setCharacterEncoding("UTF-8");
@@ -94,10 +113,8 @@ public class FrontControllerServlet extends HttpServlet {
                     if (result == null) {
                         out.print("null");
                     } else if (result instanceof String) {
-                        // Déjà une String → on écrit directement
                         out.print((String) result);
                     } else {
-                        // Sinon on convertit en JSON
                         out.print(JsonConverter.toJson(result));
                     }
                     out.flush();
@@ -128,7 +145,7 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                // SINON affichage par défaut
+                // SINON affichage par defaut
                 resp.setContentType("text/html");
                 PrintWriter out = resp.getWriter();
                 out.println("<html><body>");
@@ -140,7 +157,6 @@ public class FrontControllerServlet extends HttpServlet {
                     out.println("<p>Retour: " + result.toString() + "</p>");
                 }
                 out.println("</body></html>");
-
             } catch (Exception e) {
                 throw new ServletException(e);
             }
