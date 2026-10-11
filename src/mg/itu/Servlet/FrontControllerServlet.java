@@ -12,6 +12,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mg.itu.utils.JsonConverter;
 import mg.itu.utils.MethodInfo;
 import mg.itu.utils.ModelAndView;
 import mg.itu.utils.UrlMethod;
@@ -75,13 +76,49 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Object result = null;
 
-                try {
-                    Method method = clazz.getMethod(info.methodName, HttpServletRequest.class,
-                            HttpServletResponse.class);
-                    result = method.invoke(instance, req, resp);
-                } catch (NoSuchMethodException e) {
-                    Method method = clazz.getMethod(info.methodName);
-                    result = method.invoke(instance);
+                // Chercher TOUTES les methodes qui portent ce nom
+                Method targetMethod = null;
+                for (Method m : clazz.getMethods()) {
+                    if (m.getName().equals(info.methodName)) { // ito zao le manao anle hoe : "nom" === nom
+                        targetMethod = m;
+                        break;
+                    }
+                }
+
+                if (targetMethod == null) {
+                    throw new ServletException("Methode introuvable: " + info.methodName);
+                }
+
+                // Verifier si c'est (HttpServletRequest, HttpServletResponse)
+                Class<?>[] paramTypes = targetMethod.getParameterTypes();
+
+                if (paramTypes.length == 2
+                        && paramTypes[0] == HttpServletRequest.class
+                        && paramTypes[1] == HttpServletResponse.class) {
+
+                    result = targetMethod.invoke(instance, req, resp);
+
+                } else {
+                    // Injection des parametres via buildArgs
+                    Object[] args = MethodInfo.buildArgs(targetMethod, req, resp);
+                    result = targetMethod.invoke(instance, args);
+                }
+
+                // SI la methode est annotee @Json
+                if (info.IsJson()) {
+                    resp.setContentType("application/json");
+                    resp.setCharacterEncoding("UTF-8");
+                    PrintWriter out = resp.getWriter();
+
+                    if (result == null) {
+                        out.print("null");
+                    } else if (result instanceof String) {
+                        out.print((String) result);
+                    } else {
+                        out.print(JsonConverter.toJson(result));
+                    }
+                    out.flush();
+                    return;
                 }
 
                 // SI result est ModelAndView
@@ -108,7 +145,7 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                // SINON affichage par défaut
+                // SINON affichage par defaut
                 resp.setContentType("text/html");
                 PrintWriter out = resp.getWriter();
                 out.println("<html><body>");
@@ -120,7 +157,6 @@ public class FrontControllerServlet extends HttpServlet {
                     out.println("<p>Retour: " + result.toString() + "</p>");
                 }
                 out.println("</body></html>");
-
             } catch (Exception e) {
                 throw new ServletException(e);
             }
