@@ -13,6 +13,7 @@ import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
 public class MethodInfo {
     public String className;
@@ -37,6 +38,8 @@ public class MethodInfo {
                 args[i] = req;
             } else if (type == HttpServletResponse.class) {
                 args[i] = resp;
+            } else if (type == MapFile.class) {
+                args[i] = bindFile(p.getName(), req);
             } else if (Map.class.isAssignableFrom(type)) {
                 args[i] = bindMap(p, req);
             } else if (Collection.class.isAssignableFrom(type)) {
@@ -112,6 +115,16 @@ public class MethodInfo {
             return map;
         } catch (Exception e) {
             throw new RuntimeException("Bind map failed: " + p.getName(), e);
+        }
+    }
+
+    // Recupere un fichier uploade depuis un formulaire multipart
+    private static MapFile bindFile(String paramName, HttpServletRequest req) {
+        try {
+            Part part = req.getPart(paramName);
+            return MapFile.fromPart(part);
+        } catch (Exception e) {
+            throw new RuntimeException("Upload failed: " + paramName, e);
         }
     }
 

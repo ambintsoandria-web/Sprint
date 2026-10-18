@@ -53,3 +53,23 @@ En gros dans ce sprint 6 on va faire du json genre du toJson y aura une fonction
 Donc dans le controller de l'application test on va mettre @Jon exactement comme tu l'avait dit 
 et apparement dans la requete il faut dire si c'est json ou pas si c'est du string alors on y a va directement on convertit pas mais c'est du string rien à convertir en json 
 si non on passe par toJson 
+
+
+resaka mamorona objet dia ensuite on va prendre les Bytes par exemple recto cin puis verso cin 
+on va faire une classe de type personalisée pour prendre les images comme MapFile
+
+ATTRIBUTS :
+String fileName;
+String extensiont;
+Byte[] bytes;
+
+voilà il suffit juste da faire ca pour otenir l'upload 
+on regarde si y a untype MapFile alors on va instencier genre RectoCin ... 
+alors on va creer une instance 
+
+en gros le résumé : on va créer un objet : dont les attributs sont : String fileName , String extension , Byte[] bytes
+
+en gros le but est l'upload et apparement il faut mettre dans web xml en gros je sias pas mais l'exemple est : 
+recto cin donc une image et verso cin par exemple ok 
+et apparement je sais pas mais il faut pas mettre en dure le truc d'uplaod je sais vraiment pas c'etait quoi mais voilà il faut faire ca quoi !! 
+genre dans l'application de test il faut : un dossier upload ou on va totu simplement mettre les fichier dans ce dossier upload as tu capté ou pas 
