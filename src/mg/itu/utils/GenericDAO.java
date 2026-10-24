@@ -16,7 +16,6 @@ public class GenericDAO<T> {
         try (Connection conn = Database.getConnection();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 T instance = clazz.getDeclaredConstructor().newInstance();
                 Field[] fields = clazz.getDeclaredFields();

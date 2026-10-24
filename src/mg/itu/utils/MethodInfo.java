@@ -13,6 +13,7 @@ import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
 
 public class MethodInfo {
@@ -26,6 +27,13 @@ public class MethodInfo {
         this.isJson = isJson;
     }
 
+    private static Session buildSession(HttpServletRequest req) {
+        Session s = new Session();
+        HttpSession httpSession = req.getSession();
+        s.load(httpSession);
+        return s;
+    }
+
     public static Object[] buildArgs(Method method, HttpServletRequest req, HttpServletResponse resp) {
         Parameter[] params = method.getParameters();
         Object[] args = new Object[params.length];
@@ -33,11 +41,12 @@ public class MethodInfo {
         for (int i = 0; i < params.length; i++) {
             Parameter p = params[i];
             Class<?> type = p.getType();
-
             if (type == HttpServletRequest.class) {
                 args[i] = req;
             } else if (type == HttpServletResponse.class) {
                 args[i] = resp;
+            } else if (type == Session.class) {
+                args[i] = buildSession(req);
             } else if (type == MapFile.class) {
                 args[i] = bindFile(p.getName(), req);
             } else if (Map.class.isAssignableFrom(type)) {
@@ -143,7 +152,6 @@ public class MethodInfo {
             try {
                 setter.invoke(obj, convertSimpleValue(val, setter.getParameterTypes()[0]));
             } catch (Exception e) {
-                // ignorer
             }
         }
     }

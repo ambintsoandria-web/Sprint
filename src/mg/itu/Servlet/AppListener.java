@@ -14,6 +14,7 @@ import mg.itu.annotation.Url.UrlMapping;
 import mg.itu.utils.Database;
 import mg.itu.utils.MethodInfo;
 import mg.itu.utils.PackageScanner;
+import mg.itu.utils.Session;
 import mg.itu.utils.UrlMethod;
 
 @WebListener
@@ -33,14 +34,18 @@ public class AppListener implements ServletContextListener {
 
         viewPrefix = context.getInitParameter("viewPrefix");
         if (viewPrefix == null)
-            viewPrefix = "/WEB-INF/views/";
+            viewPrefix = "/";
 
         viewSuffix = context.getInitParameter("viewSuffix");
         if (viewSuffix == null)
             viewSuffix = ".jsp";
 
-        System.out.println("[Framework] View prefix: " + viewPrefix);
-        System.out.println("[Framework] View suffix: " + viewSuffix);
+        // >>> Initialisation de la Session globale dans le context <<<
+        Map<String, Object> sessionMap = new HashMap<>();
+        context.setAttribute("session", sessionMap);
+        Session.init(context, sessionMap);
+
+        System.out.println("[Framework] Session initialisee dans le context");
 
         String packageToScan = context.getInitParameter("controllerPackage");
         if (packageToScan == null || packageToScan.isEmpty()) {
@@ -76,13 +81,15 @@ public class AppListener implements ServletContextListener {
                                                     existing.className + "." + existing.methodName + " et " +
                                                     className + "." + method.getName());
                                 }
-                                boolean isJson = method.isAnnotationPresent(mg.itu.annotation.Json.Json.class);
+
+                                boolean isJson = method.isAnnotationPresent(
+                                        mg.itu.annotation.Json.Json.class);
 
                                 MethodInfo info = new MethodInfo(className, method.getName(), isJson);
                                 urlMethodMappings.put(key, info);
 
-                                System.out.println("[Framework] Mapping: " + httpMethod + " " + url + " -> "
-                                        + className + "." + method.getName()
+                                System.out.println("[Framework] Mapping: " + httpMethod + " " + url
+                                        + " -> " + className + "." + method.getName()
                                         + (isJson ? " [JSON]" : ""));
                             }
                         }
@@ -97,7 +104,7 @@ public class AppListener implements ServletContextListener {
         }
 
         System.out.println("[Framework] Total mappings: " + urlMethodMappings.size());
-        System.out.println("[Framework] Application demarree avec succes !");
+        System.out.println("[Framework] Application demarree !");
     }
 
     @Override

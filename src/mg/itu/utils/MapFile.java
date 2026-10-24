@@ -22,7 +22,6 @@ public class MapFile {
     }
 
     // Construit un MapFile depuis un Part (formulaire multipart)
-    // Retourne null si le fichier est absent ou vide
     public static MapFile fromPart(Part part) throws IOException {
         if (part == null || part.getSize() == 0)
             return null;
@@ -53,6 +52,15 @@ public class MapFile {
 
         Path target = dir.resolve(fileName);
         Files.write(target, bytes);
+    }
+
+    // >>> ICI : nom encode pour URL <<<
+    public String getEncodedFileName() {
+        try {
+            return java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
+        } catch (Exception e) {
+            return fileName;
+        }
     }
 
     public String getFileName() {

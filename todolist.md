@@ -73,3 +73,29 @@ en gros le but est l'upload et apparement il faut mettre dans web xml en gros je
 recto cin donc une image et verso cin par exemple ok 
 et apparement je sais pas mais il faut pas mettre en dure le truc d'uplaod je sais vraiment pas c'etait quoi mais voilà il faut faire ca quoi !! 
 genre dans l'application de test il faut : un dossier upload ou on va totu simplement mettre les fichier dans ce dossier upload as tu capté ou pas 
+f
+
+trucs d'autorisation genre : ceci doti avoir role admin pour faire cette methode 
+Session dans les methodes d'actions du controller 
+
+classe Session et si le controller voit la classe session alors on instancie je sais pas quoi 
+classe Session on a Map<String,Object>
+"nom de session" 
+"Object" genre : List<...>
+Récuperer variable
+
+ensuite on va prendre la nouvelle classeo n va la mettre dans une methode d'action ensuite on va pouvoir 
+coté framework lors du traitement de parametre on va mettre un bloc que si il y a le type de la session alors on cree une instance 
+et la map on va mettre en http session donc il peut prendre le nom de tout coté appel 
+apres avoir invoke on doit mettre à jour le http session ensuite pas besoin de ModelAndView ... 
+alors on va mettre à jour on boucle 
+
+
+# sprint 10
+certaines methodes il faut qu'on soit connecté pour pouvoir executer la methode dans le sprint 10 donc il faut etre conencté authentifié pour pouvoir executer
+
+# bis 
+Il faut avoir un role spécifique
+genre : role prof , role etuaidant voilà
+donc limiter les methodes dans le controller
+

@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.utils.JsonConverter;
 import mg.itu.utils.MethodInfo;
 import mg.itu.utils.ModelAndView;
+import mg.itu.utils.Session;
 import mg.itu.utils.UrlMethod;
 
 public class FrontControllerServlet extends HttpServlet {
@@ -24,6 +25,26 @@ public class FrontControllerServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         System.out.println("[Framework] FrontControllerServlet initialise");
+
+        String viewPrefix = getServletContext().getInitParameter("viewPrefix");
+        if (viewPrefix == null)
+            viewPrefix = "/";
+
+        String viewSuffix = getServletContext().getInitParameter("viewSuffix");
+        if (viewSuffix == null)
+            viewSuffix = ".jsp";
+
+        AppListener.viewPrefix = viewPrefix;
+        AppListener.viewSuffix = viewSuffix;
+
+        System.out.println("[Framework] viewPrefix = " + viewPrefix);
+        System.out.println("[Framework] viewSuffix = " + viewSuffix);
+
+        if (AppListener.urlMethodMappings.isEmpty()) {
+            System.out.println("[Framework] Aucun mapping charge par AppListener");
+        } else {
+            System.out.println("[Framework] " + AppListener.urlMethodMappings.size() + " mappings disponibles");
+        }
     }
 
     @Override
@@ -62,6 +83,14 @@ public class FrontControllerServlet extends HttpServlet {
         String chemin = uri.substring(contextPath.length());
         String httpMethod = req.getMethod();
 
+        if (chemin.startsWith("/upload/")
+                || chemin.startsWith("/css/")
+                || chemin.startsWith("/js/")
+                || chemin.startsWith("/img/")) {
+            getServletContext().getNamedDispatcher("default").forward(req, resp);
+            return;
+        }
+
         uris.add(chemin);
 
         UrlMethod key = new UrlMethod(chemin, httpMethod);
@@ -75,11 +104,11 @@ public class FrontControllerServlet extends HttpServlet {
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
                 Object result = null;
+                Object[] args = null;
 
-                // Chercher TOUTES les methodes qui portent ce nom
                 Method targetMethod = null;
                 for (Method m : clazz.getMethods()) {
-                    if (m.getName().equals(info.methodName)) { // ito zao le manao anle hoe : "nom" === nom
+                    if (m.getName().equals(info.methodName)) {
                         targetMethod = m;
                         break;
                     }
@@ -89,7 +118,6 @@ public class FrontControllerServlet extends HttpServlet {
                     throw new ServletException("Methode introuvable: " + info.methodName);
                 }
 
-                // Verifier si c'est (HttpServletRequest, HttpServletResponse)
                 Class<?>[] paramTypes = targetMethod.getParameterTypes();
 
                 if (paramTypes.length == 2
@@ -99,12 +127,19 @@ public class FrontControllerServlet extends HttpServlet {
                     result = targetMethod.invoke(instance, req, resp);
 
                 } else {
-                    // Injection des parametres via buildArgs
-                    Object[] args = MethodInfo.buildArgs(targetMethod, req, resp);
+                    args = MethodInfo.buildArgs(targetMethod, req, resp);
                     result = targetMethod.invoke(instance, args);
                 }
 
-                // SI la methode est annotee @Json
+                // Commit des Sessions
+                if (args != null) {
+                    for (Object arg : args) {
+                        if (arg instanceof Session) {
+                            ((Session) arg).commit(req.getSession());
+                        }
+                    }
+                }
+
                 if (info.IsJson()) {
                     resp.setContentType("application/json");
                     resp.setCharacterEncoding("UTF-8");
@@ -121,7 +156,6 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                // SI result est ModelAndView
                 if (result != null && result instanceof ModelAndView) {
                     ModelAndView mv = (ModelAndView) result;
 
@@ -137,7 +171,6 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                // SI result est String
                 if (result != null && result instanceof String) {
                     String viewPath = AppListener.viewPrefix + result.toString() + AppListener.viewSuffix;
                     RequestDispatcher dispatcher = req.getRequestDispatcher(viewPath);
@@ -145,7 +178,6 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                // SINON affichage par defaut
                 resp.setContentType("text/html");
                 PrintWriter out = resp.getWriter();
                 out.println("<html><body>");
