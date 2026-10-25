@@ -15,16 +15,44 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Part;
+import mg.itu.Servlet.AppListener;
 
 public class MethodInfo {
     public String className;
     public String methodName;
     public boolean isJson;
+    public boolean requireLogin;
+    public String requiredRole;
 
     public MethodInfo(String className, String methodName, boolean isJson) {
+        this(className, methodName, isJson, false, "");
+    }
+
+    public MethodInfo(String className, String methodName, boolean isJson,
+            boolean requireLogin, String requiredRole) {
         this.className = className;
         this.methodName = methodName;
         this.isJson = isJson;
+        this.requireLogin = requireLogin;
+        this.requiredRole = requiredRole;
+    }
+
+    public static boolean hasRole(Object user, String requiredRole) {
+        try {
+            Object roleObj = user.getClass()
+                    .getMethod(AppListener.roleGetter)
+                    .invoke(user);
+
+            if (roleObj == null)
+                return false;
+            if (roleObj instanceof String)
+                return requiredRole.equals(roleObj);
+
+            String nom = (String) roleObj.getClass().getMethod("getNom").invoke(roleObj);
+            return requiredRole.equals(nom);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static Session buildSession(HttpServletRequest req) {
@@ -59,11 +87,9 @@ public class MethodInfo {
                 args[i] = convertSimpleValue(req.getParameter(p.getName()), type);
             }
         }
-
         return args;
     }
 
-    // Employe.nom, Employe.prenom, ...
     private static Object bindObject(Class<?> type, HttpServletRequest req) {
         try {
             Object obj = type.getDeclaredConstructor().newInstance();
@@ -74,7 +100,6 @@ public class MethodInfo {
         }
     }
 
-    // Employe[0].nom, Employe[1].nom, ...
     private static Object bindCollection(Parameter p, HttpServletRequest req) {
         try {
             ParameterizedType pt = (ParameterizedType) p.getParameterizedType();
@@ -98,7 +123,6 @@ public class MethodInfo {
         }
     }
 
-    // data[cle1]=val1, data[cle2]=val2, ...
     private static Object bindMap(Parameter p, HttpServletRequest req) {
         try {
             ParameterizedType pt = (ParameterizedType) p.getParameterizedType();
@@ -106,7 +130,7 @@ public class MethodInfo {
             Class<?> valType = (Class<?>) pt.getActualTypeArguments()[1];
 
             Map<Object, Object> map = new HashMap<>();
-            String prefix = p.getName(); // necessite -parameters
+            String prefix = p.getName();
 
             Enumeration<String> names = req.getParameterNames();
             while (names.hasMoreElements()) {
@@ -127,7 +151,6 @@ public class MethodInfo {
         }
     }
 
-    // Recupere un fichier uploade depuis un formulaire multipart
     private static MapFile bindFile(String paramName, HttpServletRequest req) {
         try {
             Part part = req.getPart(paramName);
@@ -137,7 +160,6 @@ public class MethodInfo {
         }
     }
 
-    // Remplit un objet via ses setters
     private static void fillObject(Object obj, String prefix, HttpServletRequest req) {
         for (Method setter : obj.getClass().getMethods()) {
             String name = setter.getName();
@@ -156,7 +178,6 @@ public class MethodInfo {
         }
     }
 
-    // Verifie s'il existe au moins un champ pour cet index
     private static boolean hasFields(Class<?> type, String prefix, int i, HttpServletRequest req) {
         for (Method setter : type.getMethods()) {
             String name = setter.getName();
@@ -170,7 +191,6 @@ public class MethodInfo {
         return false;
     }
 
-    // Un POJO = ni primitif, ni String/Number/Boolean, ni Date, ni Servlet
     private static boolean isBindableObject(Class<?> type) {
         if (type.isPrimitive())
             return false;
@@ -193,7 +213,6 @@ public class MethodInfo {
         return true;
     }
 
-    // Convertit une String vers un type simple
     private static Object convertSimpleValue(String value, Class<?> type) {
         if (value == null || value.isEmpty())
             return null;
@@ -217,9 +236,8 @@ public class MethodInfo {
                 return Byte.parseByte(value);
             if (type == char.class || type == Character.class)
                 return value.charAt(0);
-            if (type == java.util.Date.class) {
+            if (type == java.util.Date.class)
                 return new java.text.SimpleDateFormat("yyyy-MM-dd").parse(value);
-            }
             if (type == java.sql.Date.class)
                 return java.sql.Date.valueOf(value);
             if (type == java.time.LocalDate.class)
