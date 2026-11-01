@@ -20,23 +20,13 @@ import mg.itu.Servlet.AppListener;
 public class MethodInfo {
     public String className;
     public String methodName;
-    public boolean isJson;
-    public boolean requireLogin;
-    public String requiredRole;
 
-    public MethodInfo(String className, String methodName, boolean isJson) {
-        this(className, methodName, isJson, false, "");
-    }
-
-    public MethodInfo(String className, String methodName, boolean isJson,
-            boolean requireLogin, String requiredRole) {
+    public MethodInfo(String className, String methodName) {
         this.className = className;
         this.methodName = methodName;
-        this.isJson = isJson;
-        this.requireLogin = requireLogin;
-        this.requiredRole = requiredRole;
     }
 
+    // Verifie si l'utilisateur a le role requis
     public static boolean hasRole(Object user, String requiredRole) {
         try {
             Object roleObj = user.getClass()
@@ -266,13 +256,5 @@ public class MethodInfo {
 
     public void setMethodName(String methodName) {
         this.methodName = methodName;
-    }
-
-    public boolean IsJson() {
-        return isJson;
-    }
-
-    public void setIsJson(boolean isJson) {
-        this.isJson = isJson;
     }
 }

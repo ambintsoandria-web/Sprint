@@ -11,6 +11,7 @@ public class PackageScanner {
         List<String> classes = new ArrayList<>();
 
         try {
+            // exemple : /src/java/
             String path = packageName.replace('.', '/');
             URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
 

@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import mg.itu.annotation.Json.Json;
 import mg.itu.annotation.Security.RequireLogin;
 import mg.itu.utils.JsonConverter;
 import mg.itu.utils.MethodInfo;
@@ -29,7 +30,6 @@ public class FrontControllerServlet extends HttpServlet {
         String viewPrefix = getServletContext().getInitParameter("viewPrefix");
         if (viewPrefix == null)
             viewPrefix = "/";
-
         String viewSuffix = getServletContext().getInitParameter("viewSuffix");
         if (viewSuffix == null)
             viewSuffix = ".jsp";
@@ -67,12 +67,13 @@ public class FrontControllerServlet extends HttpServlet {
 
         if (AppListener.initError != null)
             throw new ServletException(AppListener.initError);
-
+        // sprint 0 tony resaka capture de lien
         String uri = req.getRequestURI();
         String contextPath = req.getContextPath();
         String chemin = uri.substring(contextPath.length());
         String httpMethod = req.getMethod();
 
+        // Fichiers statiques
         if (chemin.startsWith("/upload/")
                 || chemin.startsWith("/css/")
                 || chemin.startsWith("/js/")
@@ -86,30 +87,33 @@ public class FrontControllerServlet extends HttpServlet {
 
         if (AppListener.urlMethodMappings.containsKey(key)) {
             MethodInfo info = AppListener.urlMethodMappings.get(key);
-
             try {
-                Class<?> clazz = Class.forName(info.className);
-                Object instance = clazz.getDeclaredConstructor().newInstance();
+                // === SINGLETON : on recupere l'instance existante ===
+                Object instance = AppListener.controllerInstances.get(info.className);
+
+                if (instance == null) {
+                    Class<?> clazz = Class.forName(info.className);
+                    instance = clazz.getDeclaredConstructor().newInstance();
+                    AppListener.controllerInstances.put(info.className, instance);
+                }
 
                 Object result = null;
                 Object[] args = null;
 
                 Method targetMethod = null;
-                for (Method m : clazz.getMethods()) {
+                for (Method m : instance.getClass().getMethods()) {
                     if (m.getName().equals(info.methodName)) {
                         targetMethod = m;
                         break;
                     }
                 }
 
-                if (targetMethod == null) {
+                if (targetMethod == null)
                     throw new ServletException("Methode introuvable: " + info.methodName);
-                }
 
-                // Verif sur la methode courante
+                // SECURITE : @RequireLogin
                 if (targetMethod.isAnnotationPresent(RequireLogin.class)) {
                     RequireLogin ann = targetMethod.getAnnotation(RequireLogin.class);
-
                     HttpSession hs = req.getSession(false);
                     Object user = (hs != null) ? hs.getAttribute(AppListener.sessionUserAttribute) : null;
 
@@ -124,8 +128,8 @@ public class FrontControllerServlet extends HttpServlet {
                     }
                 }
 
+                // Invocation
                 Class<?>[] paramTypes = targetMethod.getParameterTypes();
-
                 if (paramTypes.length == 2
                         && paramTypes[0] == HttpServletRequest.class
                         && paramTypes[1] == HttpServletResponse.class) {
@@ -143,7 +147,8 @@ public class FrontControllerServlet extends HttpServlet {
                     }
                 }
 
-                if (info.IsJson()) {
+                // JSON
+                if (targetMethod.isAnnotationPresent(Json.class)) {
                     resp.setContentType("application/json");
                     resp.setCharacterEncoding("UTF-8");
                     PrintWriter out = resp.getWriter();
@@ -157,11 +162,9 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                if (result != null && result instanceof ModelAndView) {
+                // ModelAndView
+                if (result instanceof ModelAndView) {
                     ModelAndView mv = (ModelAndView) result;
-
-                    if (!checkView(mv.getViewName(), req, resp))
-                        return;
 
                     if (mv.getData() != null) {
                         for (Map.Entry<String, Object> entry : mv.getData().entrySet()) {
@@ -174,13 +177,9 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
 
-                if (result != null && result instanceof String) {
-                    String viewName = result.toString();
-
-                    if (!checkView(viewName, req, resp))
-                        return;
-
-                    String viewPath = AppListener.viewPrefix + viewName + AppListener.viewSuffix;
+                // String (nom de vue)
+                if (result instanceof String) {
+                    String viewPath = AppListener.viewPrefix + result.toString() + AppListener.viewSuffix;
                     req.getRequestDispatcher(viewPath).forward(req, resp);
                     return;
                 }
@@ -188,6 +187,7 @@ public class FrontControllerServlet extends HttpServlet {
                 resp.setContentType("text/html");
                 PrintWriter out = resp.getWriter();
                 out.println("<html><body><h1>URL: " + chemin + "</h1></body></html>");
+
             } catch (Exception e) {
                 throw new ServletException(e);
             }
@@ -196,30 +196,6 @@ public class FrontControllerServlet extends HttpServlet {
             PrintWriter out = resp.getWriter();
             out.println("<html><body><h1>404: " + httpMethod + " " + chemin + "</h1></body></html>");
         }
-    }
-
-    private boolean checkView(String viewName, HttpServletRequest req, HttpServletResponse resp)
-            throws IOException {
-
-        if (!AppListener.protectedViews.containsKey(viewName))
-            return true;
-
-        MethodInfo pv = AppListener.protectedViews.get(viewName);
-
-        HttpSession hs = req.getSession(false);
-        Object user = (hs != null) ? hs.getAttribute(AppListener.sessionUserAttribute) : null;
-
-        if (user == null) {
-            forbidden(resp, "Vous devez etre connecte.");
-            return false;
-        }
-
-        if (!pv.requiredRole.isEmpty() && !MethodInfo.hasRole(user, pv.requiredRole)) {
-            forbidden(resp, "Role insuffisant.");
-            return false;
-        }
-
-        return true;
     }
 
     private void forbidden(HttpServletResponse resp, String message) throws IOException {

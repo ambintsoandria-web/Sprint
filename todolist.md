@@ -90,13 +90,13 @@ et la map on va mettre en http session donc il peut prendre le nom de tout coté
 apres avoir invoke on doit mettre à jour le http session ensuite pas besoin de ModelAndView ... 
 alors on va mettre à jour on boucle 
 
-
 # sprint 10
 certaines methodes il faut qu'on soit connecté pour pouvoir executer la methode dans le sprint 10 donc il faut etre conencté authentifié pour pouvoir executer
-
 
 # bis 
 Il faut avoir un role spécifique
 genre : role prof , role etuaidant voilà
 donc limiter les methodes dans le controller
 
+# sprint 11
+Singleton quand on fait une instance de framework on le fait qu'une seule fois mais pas plusieurs 

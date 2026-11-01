@@ -10,7 +10,6 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 import mg.itu.annotation.Controller.Controller;
-import mg.itu.annotation.Security.RequireLogin;
 import mg.itu.annotation.Url.UrlMapping;
 import mg.itu.utils.Database;
 import mg.itu.utils.MethodInfo;
@@ -20,9 +19,8 @@ import mg.itu.utils.UrlMethod;
 
 @WebListener
 public class AppListener implements ServletContextListener {
-
     public static Map<UrlMethod, MethodInfo> urlMethodMappings = new HashMap<>();
-    public static Map<String, MethodInfo> protectedViews = new HashMap<>();
+    public static Map<String, Object> controllerInstances = new HashMap<>();
     public static String viewPrefix = "";
     public static String viewSuffix = "";
     public static RuntimeException initError = null;
@@ -52,10 +50,14 @@ public class AppListener implements ServletContextListener {
         if (rg != null && !rg.isEmpty())
             roleGetter = rg;
 
+        // Session globale
         Map<String, Object> sessionMap = new HashMap<>();
         context.setAttribute("session", sessionMap);
         Session.init(context, sessionMap);
 
+        // Scan des controllers
+        // lasa eto @AppListener ilay : scan des controlleurs !!
+        //
         String packageToScan = context.getInitParameter("controllerPackage");
         if (packageToScan == null || packageToScan.isEmpty())
             packageToScan = "controlleur";
@@ -68,9 +70,17 @@ public class AppListener implements ServletContextListener {
                     Class<?> clazz = Class.forName(className);
 
                     if (clazz.isAnnotationPresent(Controller.class)) {
+                        // === SINGLETON : instance unique par controller ===
+                        Object instance = clazz.getDeclaredConstructor().newInstance();
+                        controllerInstances.put(className, instance);
+                        // controllerInstances.put("mg.itu.controller.UserController"
+                        // eto le izy maka anle hoe exemple {key : "User","User"} sprint 1
+
                         System.out.println("[Framework] Controller: " + className);
 
                         for (Method method : clazz.getMethods()) {
+                            // exemple methode : getAllEmp...
+                            // si l'annotation URLmAPPING est presente
                             if (method.isAnnotationPresent(UrlMapping.class)) {
                                 UrlMapping rm = method.getAnnotation(UrlMapping.class);
                                 String url = rm.value();
@@ -84,39 +94,15 @@ public class AppListener implements ServletContextListener {
                                     throw new RuntimeException("URL dupliquee: " + httpMethod + " " + url);
                                 }
 
-                                boolean isJson = method.isAnnotationPresent(
-                                        mg.itu.annotation.Json.Json.class);
-
-                                boolean requireLogin = method.isAnnotationPresent(RequireLogin.class);
-                                String requiredRole = "";
-                                if (requireLogin) {
-                                    requiredRole = method.getAnnotation(RequireLogin.class).role();
-                                }
-
-                                MethodInfo info = new MethodInfo(className, method.getName(), isJson,
-                                        requireLogin, requiredRole);
+                                MethodInfo info = new MethodInfo(className, method.getName());
                                 urlMethodMappings.put(key, info);
 
-                                // Enregistrer la vue protegee (goToXxx -> xxx)
-                                if (requireLogin) {
-                                    String m = method.getName();
-                                    if (m.startsWith("goTo") && m.length() > 4) {
-                                        String vue = m.substring(4);
-                                        vue = Character.toLowerCase(vue.charAt(0)) + vue.substring(1);
-                                        protectedViews.put(vue, info);
-                                        System.out.println("[Framework] Vue protegee: '" + vue
-                                                + "' role='" + requiredRole + "'");
-                                    }
-                                }
-
                                 System.out.println("[Framework] Mapping: " + httpMethod + " " + url
-                                        + " -> " + className + "." + method.getName()
-                                        + (isJson ? " [JSON]" : "")
-                                        + (requireLogin ? " [LOGIN]" : ""));
+                                        + " -> " + className + "." + method.getName());
                             }
                         }
                     }
-                } catch (ClassNotFoundException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -126,7 +112,7 @@ public class AppListener implements ServletContextListener {
         }
 
         System.out.println("[Framework] Total mappings: " + urlMethodMappings.size());
-        System.out.println("[Framework] Vues protegees: " + protectedViews.size());
+        System.out.println("[Framework] Total controllers: " + controllerInstances.size());
     }
 
     @Override
